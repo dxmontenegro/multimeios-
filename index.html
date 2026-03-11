@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Biblioteca Escolar</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f0f2f5;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
+}
+
+.login-box{
+background:white;
+padding:30px;
+width:320px;
+border-radius:10px;
+text-align:center;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+.logo{
+width:120px;
+margin-bottom:10px;
+}
+
+input{
+width:90%;
+padding:10px;
+margin:8px;
+}
+
+button{
+padding:10px;
+margin:5px;
+width:95%;
+background:#004080;
+color:white;
+border:none;
+cursor:pointer;
+}
+
+button:hover{
+background:#002f5e;
+}
+
+#erro{
+color:red;
+margin-top:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="login-box">
+
+<img src="imagem1.png" class="logo">
+
+<h2>Biblioteca Escolar</h2>
+
+<input id="email" type="email" placeholder="Email">
+
+<input id="senha" type="password" placeholder="Senha">
+
+<button onclick="login()">Entrar</button>
+
+<button onclick="criarConta()">Criar Conta</button>
+
+<button onclick="recuperarSenha()">Esqueci Senha</button>
+
+<p id="erro"></p>
+
+</div>
+
+<script>
+
+const SUPABASE_URL = "https://fwemutmkbvnriqxxufhx.supabase.co"
+
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3ZW11dG1rYnZucmlxeHh1Zmh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNjM2MzMsImV4cCI6MjA4ODczOTYzM30.HCXIoI_r7_yGJntTPIizhrP4apxXV3Ahd6Jk2AkvKas"
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+
+
+async function login(){
+
+const email = document.getElementById("email").value
+const senha = document.getElementById("senha").value
+
+const { error } = await client.auth.signInWithPassword({
+email: email,
+password: senha
+})
+
+if(error){
+document.getElementById("erro").innerText = error.message
+return
+}
+
+window.location.href = "dashboard.html"
+
+}
+
+
+
+async function criarConta(){
+
+const email = prompt("Digite o email")
+const senha = prompt("Digite a senha")
+
+const { error } = await client.auth.signUp({
+email: email,
+password: senha
+})
+
+if(error){
+alert(error.message)
+}else{
+alert("Conta criada com sucesso")
+}
+
+}
+
+
+
+async function recuperarSenha(){
+
+const email = prompt("Digite seu email")
+
+await client.auth.resetPasswordForEmail(email)
+
+alert("Email de recuperação enviado")
+
+}
+
+</script>
+
+</body>
+
+</html>

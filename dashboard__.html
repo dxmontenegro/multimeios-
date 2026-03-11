@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Biblioteca - EEMTI DRAGÃO DO MAR</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6f9;
+margin:0;
+}
+
+header{
+background:#004080;
+color:white;
+padding:20px;
+text-align:center;
+}
+
+.menu{
+background:#e9eef5;
+padding:10px;
+text-align:center;
+}
+
+.menu button{
+padding:10px 18px;
+margin:4px;
+border:none;
+background:#004080;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+.menu button:hover{
+background:#002c5c;
+}
+
+#conteudo{
+width:900px;
+margin:30px auto;
+}
+
+.card{
+background:white;
+padding:20px;
+margin:10px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+.resultado{
+padding:12px;
+margin-top:10px;
+border-radius:6px;
+}
+
+.card-prazo{
+background:#d4edda;
+border-left:6px solid #28a745;
+}
+
+.card-hoje{
+background:#fff3cd;
+border-left:6px solid #ffc107;
+}
+
+.card-atrasado{
+background:#f8d7da;
+border-left:6px solid #dc3545;
+}
+
+input{
+width:100%;
+padding:8px;
+margin:5px 0;
+}
+
+footer{
+background:#004080;
+color:white;
+text-align:center;
+padding:10px;
+margin-top:40px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<img src="imagem1.png" style="height:120px; display:block; margin:auto; margin-bottom:10px;">
+
+<h1>📚 MULTIMEIOS</h1>
+<h3>EEMTI DRAGÃO DO MAR</h3>
+
+</header>
+
+<div class="menu">
+
+<button onclick="dashboard()">Dashboard</button>
+<button onclick="telaCadastrar()">Cadastrar Livro</button>
+<button onclick="telaBuscar()">Localizar Livro</button>
+<button onclick="telaEmprestimo()">Registrar Empréstimo</button>
+<button onclick="devolucoesPrevistas()">Devoluções Previstas</button>
+<button onclick="listarLivros()">Lista de Livros</button>
+<button onclick="listarEmprestimos()">Empréstimos</button>
+<button onclick="livrosAtrasados()">Atrasados</button>
+<button onclick="logout()">Sair</button>
+
+</div>
+
+<div id="conteudo"></div>
+
+<footer>
+
+Desenvolvido pelo LEI - EEMTI DRAGÃO DO MAR  
+<br>
+by D.S.MONTENEGRO
+
+</footer>
+
+<script>
+
+const SUPABASE_URL="https://fwemutmkbvnriqxxufhx.supabase.co"
+
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3ZW11dG1rYnZucmlxeHh1Zmh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNjM2MzMsImV4cCI6MjA4ODczOTYzM30.HCXIoI_r7_yGJntTPIizhrP4apxXV3Ahd6Jk2AkvKas"
+
+const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
+
+
+
+// DASHBOARD
+
+async function dashboard(){
+
+const {count:livros}=await client.from("livros").select("*",{count:"exact",head:true})
+
+const {count:emprestimos}=await client.from("emprestimos")
+.select("*",{count:"exact",head:true})
+.eq("status","emprestado")
+
+conteudo.innerHTML=`
+
+<div class="card">
+
+📚 Livros cadastrados: <b>${livros}</b><br><br>
+
+📖 Empréstimos ativos: <b>${emprestimos}</b>
+
+</div>
+
+`
+
+}
+
+
+
+// CADASTRAR LIVRO
+
+function telaCadastrar(){
+
+conteudo.innerHTML=`
+
+<div class="card">
+
+<h3>📚 Cadastrar Livro</h3>
+
+<input id="titulo" placeholder="Título">
+
+<input id="autor" placeholder="Autor">
+
+<input id="categoria" placeholder="Categoria">
+
+<input id="estante" placeholder="Estante">
+
+<input id="prateleira" placeholder="Prateleira">
+
+<input id="secao" placeholder="Seção">
+
+<button onclick="salvarLivro()">Salvar</button>
+
+</div>
+
+`
+
+}
+
+async function salvarLivro(){
+
+await client.from("livros").insert({
+
+titulo:titulo.value,
+autor:autor.value,
+categoria:categoria.value,
+estante:estante.value,
+prateleira:prateleira.value,
+secao:secao.value
+
+})
+
+alert("Livro cadastrado")
+
+}
+
+
+
+// LOCALIZAR LIVRO
+
+function telaBuscar(){
+
+conteudo.innerHTML=`
+
+<div class="card">
+
+<h3>🔎 Localizar Livro</h3>
+
+<input id="busca">
+
+<button onclick="buscarLivro()">Buscar</button>
+
+<div id="resultadoBusca"></div>
+
+</div>
+
+`
+
+}
+
+async function buscarLivro(){
+
+const {data}=await client.from("livros")
+.select("*")
+.ilike("titulo","%"+busca.value+"%")
+
+let html=""
+
+data.forEach(l=>{
+
+html+=`
+
+<div class="resultado card-prazo">
+
+📖 <b>${l.titulo}</b><br>
+
+✍ Autor: ${l.autor}<br>
+
+📍 Estante ${l.estante} - Prateleira ${l.prateleira}
+
+</div>
+
+`
+
+})
+
+resultadoBusca.innerHTML=html
+
+}
+
+
+
+// REGISTRAR EMPRÉSTIMO
+
+function telaEmprestimo(){
+
+conteudo.innerHTML=`
+
+<div class="card">
+
+<h3>📖 Registrar Empréstimo</h3>
+
+<input id="livro" placeholder="Livro">
+
+<input id="aluno" placeholder="Aluno">
+
+<input id="turma" placeholder="Turma">
+
+<input id="telefone" placeholder="Telefone">
+
+<input type="date" id="data">
+
+<button onclick="registrarEmprestimo()">Salvar</button>
+
+</div>
+
+`
+
+}
+
+async function registrarEmprestimo(){
+
+const user=await client.auth.getUser()
+
+await client.from("emprestimos").insert({
+
+titulo_livro:livro.value,
+aluno_nome:aluno.value,
+turma:turma.value,
+telefone:telefone.value,
+data_prevista:data.value,
+email_funcionario:user.data.user.email,
+status:"emprestado"
+
+})
+
+alert("Empréstimo registrado")
+
+}
+
+
+
+// DEVOLUÇÕES PREVISTAS
+
+async function devolucoesPrevistas(){
+
+const hoje=new Date().toISOString().split("T")[0]
+
+const {data}=await client.from("emprestimos")
+.select("*")
+.eq("status","emprestado")
+.order("data_prevista",{ascending:true})
+
+let html="<div class='card'><h3>📅 Devoluções Previstas</h3>"
+
+data.forEach(e=>{
+
+let classe="card-prazo"
+
+if(e.data_prevista < hoje){
+classe="card-atrasado"
+}else if(e.data_prevista === hoje){
+classe="card-hoje"
+}
+
+html+=`
+
+<div class="resultado ${classe}">
+
+👨‍🎓 ${e.aluno_nome}<br>
+
+📚 ${e.titulo_livro}<br>
+
+🏫 ${e.turma}<br>
+
+📅 Devolver até: ${e.data_prevista}<br><br>
+
+<button onclick="registrarDevolucao('${e.id}')">✅ Devolvendo</button>
+
+<button onclick="notificar('${e.telefone}','${e.aluno_nome}','${e.titulo_livro}','${e.data_prevista}')">📲 Notificar</button>
+
+</div>
+
+`
+
+})
+
+html+="</div>"
+
+conteudo.innerHTML=html
+
+}
+
+
+
+// DEVOLUÇÃO
+
+async function registrarDevolucao(id){
+
+const user=await client.auth.getUser()
+
+await client.from("emprestimos")
+.update({
+
+status:"devolvido",
+data_devolucao:new Date(),
+email_recebedor:user.data.user.email
+
+})
+.eq("id",id)
+
+alert("Devolução registrada")
+
+devolucoesPrevistas()
+
+}
+
+
+
+// LISTA LIVROS
+
+async function listarLivros(){
+
+const {data}=await client.from("livros")
+.select("*")
+.order("titulo",{ascending:true})
+
+let html="<div class='card'><h3>📚 Lista de Livros</h3>"
+
+data.forEach(l=>{
+
+html+=`
+
+<div class="resultado card-prazo">
+
+📖 ${l.titulo}<br>
+
+✍ ${l.autor}
+
+</div>
+
+`
+
+})
+
+html+="</div>"
+
+conteudo.innerHTML=html
+
+}
+
+
+
+// EMPRÉSTIMOS
+
+async function listarEmprestimos(){
+
+const {data}=await client.from("emprestimos")
+.select("*")
+.eq("status","emprestado")
+
+let html="<div class='card'><h3>📖 Empréstimos Ativos</h3>"
+
+data.forEach(e=>{
+
+html+=`
+
+<div class="resultado card-hoje">
+
+👨‍🎓 ${e.aluno_nome}<br>
+
+📚 ${e.titulo_livro}<br>
+
+📅 ${e.data_prevista}
+
+</div>
+
+`
+
+})
+
+html+="</div>"
+
+conteudo.innerHTML=html
+
+}
+
+
+
+// ATRASADOS
+
+async function livrosAtrasados(){
+
+const hoje=new Date().toISOString().split("T")[0]
+
+const {data}=await client.from("emprestimos")
+.select("*")
+.lt("data_prevista",hoje)
+.eq("status","emprestado")
+
+let html="<div class='card'><h3>⚠ Livros Atrasados</h3>"
+
+data.forEach(e=>{
+
+html+=`
+
+<div class="resultado card-atrasado">
+
+👨‍🎓 ${e.aluno_nome}<br>
+
+📚 ${e.titulo_livro}<br>
+
+📅 ${e.data_prevista}<br><br>
+
+<button onclick="notificar('${e.telefone}','${e.aluno_nome}','${e.titulo_livro}','${e.data_prevista}')">
+
+📲 Notificar WhatsApp
+
+</button>
+
+</div>
+
+`
+
+})
+
+html+="</div>"
+
+conteudo.innerHTML=html
+
+}
+
+
+
+// WHATSAPP
+
+function notificar(telefone,aluno,livro,data){
+
+const mensagem=
+
+`📚 *Biblioteca Escolar*
+🏫 *EEMTI Dragão do Mar*
+
+Olá *${aluno}*! 👋
+
+📖 Livro: *${livro}*
+
+📅 Devolver até: ${data}
+
+⚠ Pedimos gentilmente a devolução na biblioteca.
+
+🤝 Obrigado pela colaboração!
+
+📍 Biblioteca Escolar
+EEMTI Dragão do Mar`
+
+const url="https://wa.me/55"+telefone+"?text="+encodeURIComponent(mensagem)
+
+window.open(url)
+
+}
+
+
+
+// LOGOUT
+
+async function logout(){
+
+await client.auth.signOut()
+
+window.location.href="index.html"
+
+}
+
+dashboard()
+
+</script>
+
+</body>
+</html>
