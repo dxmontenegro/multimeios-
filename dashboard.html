@@ -7,7 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Biblioteca - EEMTI DRAGÃO DO MAR</title>
-<link rel="icon" type="image/png" href="imagem1.png">
+
+<link rel="icon" href="favicon.ico">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -95,14 +97,6 @@ max-width:400px;
 margin:auto;
 }
 
-footer{
-background:#004080;
-color:white;
-text-align:center;
-padding:10px;
-margin-top:40px;
-}
-
 </style>
 
 </head>
@@ -111,7 +105,7 @@ margin-top:40px;
 
 <header>
 
-<img src="imagem1.png" style="height:120px; display:block; margin:auto; margin-bottom:10px;">
+<img src="imagem1.png" style="height:120px;display:block;margin:auto;margin-bottom:10px;">
 
 <h1>📚 Biblioteca Escolar</h1>
 <h3>EEMTI DRAGÃO DO MAR</h3>
@@ -122,9 +116,8 @@ margin-top:40px;
 
 <button onclick="dashboard()">Dashboard</button>
 <button onclick="telaCadastrar()">Cadastrar Livro</button>
-<button onclick="telaBuscar()">Localizar Livro</button>
+<button onclick="telaConsultar()">Consultar Livro</button>
 <button onclick="telaEmprestimo()">Registrar Empréstimo</button>
-<button onclick="abrirScanner()">📷 Escanear Livro</button>
 <button onclick="devolucoesPrevistas()">Devoluções Previstas</button>
 <button onclick="listarLivros()">Lista de Livros</button>
 <button onclick="listarEmprestimos()">Empréstimos</button>
@@ -134,14 +127,6 @@ margin-top:40px;
 </div>
 
 <div id="conteudo"></div>
-
-<footer>
-
-Desenvolvido pelo LEI - EEMTI DRAGÃO DO MAR  
-<br>
-by D.S.MONTENEGRO
-
-</footer>
 
 <script>
 
@@ -157,19 +142,16 @@ async function dashboard(){
 
 const {count:livros}=await client.from("livros").select("*",{count:"exact",head:true})
 
-const {count:emprestimos}=await client.from("emprestimos").select("*",{count:"exact",head:true}).eq("status","emprestado")
+const {count:emp}=await client.from("emprestimos")
+.select("*",{count:"exact",head:true}).eq("status","emprestado")
 
 conteudo.innerHTML=`
-
 <div class="card">
 
-📚 Livros cadastrados: <b>${livros}</b><br><br>
+📚 Livros cadastrados: ${livros}<br><br>
+📖 Empréstimos ativos: ${emp}
 
-📖 Empréstimos ativos: <b>${emprestimos}</b>
-
-</div>
-
-`
+</div>`
 
 }
 
@@ -181,17 +163,21 @@ conteudo.innerHTML=`
 
 <div class="card">
 
-<h3>📚 Cadastrar Livro</h3>
+<h3>Cadastrar Livro</h3>
 
+<button onclick="scanCodigo()">📷 Escanear Código</button>
+
+<input id="codigo" placeholder="Código de barras">
 <input id="titulo" placeholder="Título">
 <input id="autor" placeholder="Autor">
 <input id="categoria" placeholder="Categoria">
-<input id="codigo" placeholder="ISBN / Código de barras">
 <input id="estante" placeholder="Estante">
 <input id="prateleira" placeholder="Prateleira">
 <input id="secao" placeholder="Seção">
 
 <button onclick="salvarLivro()">Salvar</button>
+
+<div id="reader"></div>
 
 </div>
 
@@ -201,14 +187,31 @@ conteudo.innerHTML=`
 
 
 
+function scanCodigo(){
+
+const scanner=new Html5Qrcode("reader")
+
+scanner.start({ facingMode:"environment" },{ fps:10, qrbox:250 },
+
+(text)=>{
+
+document.getElementById("codigo").value=text
+scanner.stop()
+
+})
+
+}
+
+
+
 async function salvarLivro(){
 
 await client.from("livros").insert({
 
+codigo:codigo.value,
 titulo:titulo.value,
 autor:autor.value,
 categoria:categoria.value,
-codigo:codigo.value,
 estante:estante.value,
 prateleira:prateleira.value,
 secao:secao.value
@@ -221,19 +224,19 @@ alert("Livro cadastrado")
 
 
 
-function telaBuscar(){
+function telaConsultar(){
 
 conteudo.innerHTML=`
 
 <div class="card">
 
-<h3>🔎 Localizar Livro</h3>
+<h3>Consultar Livro</h3>
 
-<input id="busca">
+<button onclick="scanConsulta()">📷 Escanear</button>
 
-<button onclick="buscarLivro()">Buscar</button>
+<div id="reader"></div>
 
-<div id="resultadoBusca"></div>
+<div id="resultado"></div>
 
 </div>
 
@@ -243,30 +246,43 @@ conteudo.innerHTML=`
 
 
 
-async function buscarLivro(){
+function scanConsulta(){
 
-const {data}=await client.from("livros").select("*").ilike("titulo","%"+busca.value+"%")
+const scanner=new Html5Qrcode("reader")
 
-let html=""
+scanner.start({ facingMode:"environment" },{ fps:10, qrbox:250 },
 
-data.forEach(l=>{
+async(text)=>{
 
-html+=`
+const {data}=await client.from("livros").select("*").eq("codigo",text).maybeSingle()
 
-<div class="resultado card-prazo">
+if(!data){
 
-📖 <b>${l.titulo}</b><br>
-✍ Autor: ${l.autor}<br>
-🔢 Código: ${l.codigo}<br>
-📍 Estante ${l.estante} - Prateleira ${l.prateleira}
+alert("Livro não encontrado")
+scanner.stop()
+return
+
+}
+
+resultado.innerHTML=`
+
+<div class="resultado">
+
+📖 ${data.titulo}<br>
+✍ ${data.autor}<br>
+📂 ${data.categoria}<br><br>
+
+📚 Estante: ${data.estante}<br>
+📦 Prateleira: ${data.prateleira}<br>
+📍 Seção: ${data.secao}
 
 </div>
 
 `
 
-})
+scanner.stop()
 
-resultadoBusca.innerHTML=html
+})
 
 }
 
@@ -278,7 +294,9 @@ conteudo.innerHTML=`
 
 <div class="card">
 
-<h3>📖 Registrar Empréstimo</h3>
+<h3>Registrar Empréstimo</h3>
+
+<button onclick="scanEmprestimo()">📷 Escanear Livro</button>
 
 <input id="livro" placeholder="Livro">
 <input id="aluno" placeholder="Aluno">
@@ -288,9 +306,35 @@ conteudo.innerHTML=`
 
 <button onclick="registrarEmprestimo()">Salvar</button>
 
+<div id="reader"></div>
+
 </div>
 
 `
+
+}
+
+
+
+function scanEmprestimo(){
+
+const scanner=new Html5Qrcode("reader")
+
+scanner.start({ facingMode:"environment" },{ fps:10, qrbox:250 },
+
+async(text)=>{
+
+const {data}=await client.from("livros").select("*").eq("codigo",text).maybeSingle()
+
+if(data){
+
+document.getElementById("livro").value=data.titulo
+
+}
+
+scanner.stop()
+
+})
 
 }
 
@@ -298,102 +342,45 @@ conteudo.innerHTML=`
 
 async function registrarEmprestimo(){
 
-const user=await client.auth.getUser()
+const livro = document.getElementById("livro").value
+const aluno = document.getElementById("aluno").value
+const turma = document.getElementById("turma").value
+const telefone = document.getElementById("telefone").value
+const dataPrevista = document.getElementById("data").value
 
-await client.from("emprestimos").insert({
+if(!livro || !aluno || !dataPrevista){
 
-titulo_livro:livro.value,
-aluno_nome:aluno.value,
-turma:turma.value,
-telefone:telefone.value,
-data_prevista:data.value,
-email_funcionario:user.data.user.email,
+alert("Preencha livro, aluno e data de devolução")
+return
+
+}
+
+const { error } = await client.from("emprestimos").insert({
+
+titulo_livro: livro,
+aluno_nome: aluno,
+turma: turma,
+telefone: telefone,
+data_prevista: dataPrevista,
 status:"emprestado"
 
 })
 
-alert("Empréstimo registrado")
+if(error){
+
+console.log(error)
+alert("Erro ao registrar empréstimo")
+return
 
 }
 
+alert("Empréstimo registrado com sucesso")
 
-
-function abrirScanner(){
-
-conteudo.innerHTML=`
-
-<div class="card">
-
-<h3>📷 Escanear Código de Barras</h3>
-
-<div id="reader"></div>
-
-</div>
-
-`
-
-const scanner=new Html5Qrcode("reader")
-
-scanner.start(
-{ facingMode:"environment" },
-{
-fps:10,
-qrbox:250,
-formatsToSupport:[
-Html5QrcodeSupportedFormats.EAN_13,
-Html5QrcodeSupportedFormats.EAN_8,
-Html5QrcodeSupportedFormats.CODE_128
-]
-},
-
-async (decodedText)=>{
-
-const {data}=await client.from("livros").select("*").eq("codigo",decodedText).single()
-
-if(data){
-
-alert("Livro encontrado: "+data.titulo)
-
-telaEmprestimo()
-
-setTimeout(()=>{
-
-document.getElementById("livro").value=data.titulo
-
-},500)
-
-scanner.stop()
-
-}
-
-}
-
-)
-
-}
-
-
-
-function notificar(telefone,aluno,livro,data){
-
-const mensagem=
-
-`📚 Biblioteca Escolar
-🏫 EEMTI Dragão do Mar
-
-Olá ${aluno}!
-
-O livro "${livro}" está emprestado em seu nome.
-
-📅 Devolver até: ${data}
-
-Pedimos a devolução na biblioteca.
-
-Obrigado!`
-
-const url="https://wa.me/55"+telefone+"?text="+encodeURIComponent(mensagem)
-
-window.open(url)
+document.getElementById("livro").value=""
+document.getElementById("aluno").value=""
+document.getElementById("turma").value=""
+document.getElementById("telefone").value=""
+document.getElementById("data").value=""
 
 }
 
@@ -411,8 +398,15 @@ data.forEach(e=>{
 
 let classe="card-prazo"
 
-if(e.data_prevista < hoje) classe="card-atrasado"
-else if(e.data_prevista === hoje) classe="card-hoje"
+if(e.data_prevista < hoje){
+
+classe="card-atrasado"
+
+}else if(e.data_prevista == hoje){
+
+classe="card-hoje"
+
+}
 
 html+=`
 
@@ -423,9 +417,11 @@ html+=`
 🏫 ${e.turma}<br>
 📅 Devolver até: ${e.data_prevista}<br><br>
 
-<button onclick="registrarDevolucao('${e.id}')">✅ Devolvendo</button>
+<button onclick="registrarDevolucao('${e.id}')">Recebendo</button>
 
-<button onclick="notificar('${e.telefone}','${e.aluno_nome}','${e.titulo_livro}','${e.data_prevista}')">📲 Notificar</button>
+<button onclick="notificar('${e.telefone}','${e.aluno_nome}','${e.titulo_livro}','${e.data_prevista}')">
+Notificar
+</button>
 
 </div>
 
@@ -443,19 +439,30 @@ conteudo.innerHTML=html
 
 async function registrarDevolucao(id){
 
-const user=await client.auth.getUser()
-
 await client.from("emprestimos").update({
 
 status:"devolvido",
-data_devolucao:new Date(),
-email_recebedor:user.data.user.email
+data_devolucao:new Date()
 
 }).eq("id",id)
 
-alert("Devolução registrada")
+alert("Livro devolvido")
 
 devolucoesPrevistas()
+
+}
+
+
+
+function notificar(telefone,aluno,livro,data){
+
+const msg=`📚 Biblioteca EEMTI Dragão do Mar
+
+Olá ${aluno}
+
+O livro "${livro}" deveria ser devolvido em ${data}.`
+
+window.open("https://wa.me/55"+telefone+"?text="+encodeURIComponent(msg))
 
 }
 
@@ -465,20 +472,11 @@ async function listarLivros(){
 
 const {data}=await client.from("livros").select("*")
 
-let html="<div class='card'><h3>📚 Lista de Livros</h3>"
+let html="<div class='card'><h3>Livros</h3>"
 
 data.forEach(l=>{
 
-html+=`
-
-<div class="resultado">
-
-📖 ${l.titulo}<br>
-🔢 Código: ${l.codigo}
-
-</div>
-
-`
+html+=`<div class="resultado">${l.titulo} (${l.codigo})</div>`
 
 })
 
@@ -494,10 +492,21 @@ async function listarEmprestimos(){
 
 const {data}=await client.from("emprestimos").select("*").eq("status","emprestado")
 
-let html="<div class='card'><h3>📖 Empréstimos</h3>"
+let html="<div class='card'><h3>Empréstimos</h3>"
 
 data.forEach(e=>{
-html+=`<div class="resultado">${e.aluno_nome} - ${e.titulo_livro}</div>`
+
+html+=`
+
+<div class="resultado">
+
+${e.aluno_nome} - ${e.titulo_livro}<br>
+📅 Devolver até: ${e.data_prevista}
+
+</div>
+
+`
+
 })
 
 html+="</div>"
@@ -512,12 +521,26 @@ async function livrosAtrasados(){
 
 const hoje=new Date().toISOString().split("T")[0]
 
-const {data}=await client.from("emprestimos").select("*").lt("data_prevista",hoje).eq("status","emprestado")
+const {data}=await client.from("emprestimos")
+.select("*")
+.lt("data_prevista",hoje)
+.eq("status","emprestado")
 
-let html="<div class='card'><h3>⚠ Atrasados</h3>"
+let html="<div class='card'><h3>Atrasados</h3>"
 
 data.forEach(e=>{
-html+=`<div class="resultado card-atrasado">${e.aluno_nome} - ${e.titulo_livro}</div>`
+
+html+=`
+
+<div class="resultado card-atrasado">
+
+${e.aluno_nome} - ${e.titulo_livro}<br>
+📅 Deveria devolver: ${e.data_prevista}
+
+</div>
+
+`
+
 })
 
 html+="</div>"
@@ -542,5 +565,6 @@ dashboard()
 
 </body>
 </html>
+
 
 
